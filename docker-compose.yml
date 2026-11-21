@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    ports:
+      - "${APP_PORT:-8000}:80"
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost:${APP_PORT:-8000}
+      APP_KEY: ${APP_KEY:-}
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: restful_api
+      DB_USERNAME: restful
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      SEED: ${SEED:-false}
+    volumes:
+      - storage:/var/www/html/storage
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: restful_api
+      POSTGRES_USER: restful
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U restful -d restful_api"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  storage:
+  pgdata:

@@ -17,6 +17,13 @@ php artisan passport:client --personal --name=Personal --provider=users
 php artisan serve
 ```
 
+## Docker
+```bash
+docker compose up -d --build        # API at http://localhost:8000/api
+SEED=true docker compose up -d      # optional: seed 30 users on first start
+```
+The entrypoint runs the migrations, generates the Passport keys and the personal access client, and creates an `APP_KEY` if none is set. App storage (keys, logs) and Postgres data live in named volumes; `docker compose down -v` removes them. Override the port or database password with `APP_PORT` and `DB_PASSWORD`.
+
 ## Endpoints (prefix `/api`)
 | Method | Path | Auth | Description |
 |---|---|---|---|
