@@ -1,17 +1,18 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\UsersApiController;
+use Illuminate\Support\Facades\Route;
 
-Route::post('login', 'UsersApiController@login');
-Route::post('signup', 'UsersApiController@signup');
+Route::post('login', [UsersApiController::class, 'login']);
+Route::post('signup', [UsersApiController::class, 'signup']);
 
-Route::group(['middleware' => 'auth:api'], function () {
-    Route::get('logout', 'UsersApiController@logout');
-    Route::get('user', 'UsersApiController@user');
+Route::middleware('auth:api')->group(function () {
+    Route::get('logout', [UsersApiController::class, 'logout']);
+    Route::get('user', [UsersApiController::class, 'user']);
 
-    Route::get('users', 'UsersApiController@index');
-    Route::post('user/create', 'UsersApiController@store');
-    Route::post('user/{id}', 'UsersApiController@show');
-    Route::put('user/{id}', 'UsersApiController@update');
-    Route::delete('user/{id}', 'UsersApiController@delete');
+    Route::get('users', [UsersApiController::class, 'index']);
+    Route::post('user/create', [UsersApiController::class, 'store']);
+    Route::post('user/{id}', [UsersApiController::class, 'show']);
+    Route::put('user/{id}', [UsersApiController::class, 'update']);
+    Route::delete('user/{id}', [UsersApiController::class, 'delete']);
 });

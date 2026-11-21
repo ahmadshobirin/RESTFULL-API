@@ -2,127 +2,125 @@
 
 namespace App\Http\Controllers;
 
-use Auth;
-use Response;
-use App\User;
-use Carbon\Carbon;
+use App\Http\Resources\UserResource;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Http\Resources\UserResources;
+use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Hash;
 
 class UsersApiController extends Controller
 {
-
-    public function login(Request $request)
+    public function login(Request $request): JsonResponse
     {
         $request->validate([
             'email' => 'required|string|email',
             'password' => 'required|string',
-            'remember_me' => 'boolean'
+            'remember_me' => 'boolean',
         ]);
 
-        $credentials = request(['email', 'password']);
+        $user = User::where('email', $request->email)->first();
 
-        if (!Auth::attempt($credentials))
-            return response()->json([
-                'message' => 'Unauthorized'
-            ], 401);
+        if (! $user || ! Hash::check($request->password, $user->password)) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
 
-        $user = $request->user();
-        $tokenResult = $user->createToken('Personal Access Token');
-        $token = $tokenResult->token;
-
-        if ($request->remember_me)
-            $token->expires_at = Carbon::now()->addWeeks(1);
-        $token->save();
+        $expiresAt = $request->boolean('remember_me') ? Date::now()->addWeeks(1) : null;
+        $tokenResult = $user->createToken('Personal Access Token', ['*'], $expiresAt);
 
         return response()->json([
             'data' => [
-                'id' => $request->user()->id,
-                'name' => $request->user()->name,
-                'email' => $request->user()->email
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
             ],
             'access_token' => $tokenResult->accessToken,
             'token_type' => 'Bearer',
-            'expires_at' => Carbon::parse(
-                $tokenResult->token->expires_at
-            )->toDateTimeString()
+            'expires_at' => $tokenResult->token->expires_at?->toDateTimeString(),
         ]);
+    }
+
+    public function signup(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|string|email|unique:users,email',
+            'password' => 'required|string',
+        ]);
+
+        User::create($data);
+
+        return response()->json([
+            'data' => ['status' => 201, 'description' => 'Created'],
+        ], 201);
+    }
+
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->token()->revoke();
+
+        return response()->json(['message' => 'Successfully logged out']);
+    }
+
+    public function user(Request $request): UserResource
+    {
+        return new UserResource($request->user());
     }
 
     public function index()
     {
-        $users = User::paginate(8);
-        return UserResources::collection($users);
+        return UserResource::collection(User::paginate(8));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        $request->validate([
-            'email' => 'email|unique:users,email'
+        $data = $request->validate([
+            'name' => 'required|string',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string',
         ]);
 
-        $request->merge([
-            'password' => bcrypt($request->password)
-        ]);
-
-        User::create($request->all());
+        User::create($data);
 
         return response()->json([
-            'data' => [
-                'status' => 201,
-                'description' => 'Created'
-            ]
+            'data' => ['status' => 201, 'description' => 'Created'],
         ], 201);
     }
 
-    public function show($id)
+    public function show($id): UserResource
     {
-        $user = User::find($id);
-
-        return new UserResources($user);
+        return new UserResource(User::findOrFail($id));
     }
 
-    public function update(Request $request, $id)
+    public function update(Request $request, $id): JsonResponse
     {
-        $request->validate([
-            'email' => 'email|unique:users,email,' . $id
+        $data = $request->validate([
+            'name' => 'sometimes|string',
+            'email' => 'sometimes|email|unique:users,email,'.$id,
+            'password' => 'sometimes|string',
         ]);
 
-        $request->merge([
-            'password' => bcrypt($request->password)
-        ]);
-
-        User::where('id', $id)->update($request->all());
+        User::findOrFail($id)->update($data);
 
         return response()->json([
-            'data' => [
-                'status' => 202,
-                'description' => 'Accepted'
-            ]
+            'data' => ['status' => 202, 'description' => 'Accepted'],
         ], 202);
     }
 
-    public function delete(Request $request, $id)
+    public function delete($id): JsonResponse
     {
-        $user = User::where('id', $id)->first();
+        $user = User::find($id);
 
-        if ($user != null) {
-
-            $user->delete();
-
+        if ($user === null) {
             return response()->json([
-                'data' => [
-                    'status' => 202,
-                    'description' => 'Accepted'
-                ]
-            ], 202);
+                'data' => ['status' => 403, 'description' => 'Bad Request'],
+            ], 403);
         }
 
+        $user->delete();
+
         return response()->json([
-            'data' => [
-                'status' => 403,
-                'description' => 'Bad Request'
-            ]
-        ], 403);
+            'data' => ['status' => 202, 'description' => 'Accepted'],
+        ], 202);
     }
 }
