@@ -5,7 +5,7 @@ A small REST API built with Laravel 13 and Laravel Passport: token authenticatio
 ## Stack
 - Laravel 13, PHP 8.3+
 - Laravel Passport (personal access tokens)
-- SQLite by default, PostgreSQL in Docker
+- SQLite by default; Docker runs nginx + PHP-FPM + PostgreSQL
 
 ## Installation
 
@@ -26,7 +26,7 @@ php artisan serve                   # http://localhost:8000/api
 docker compose up -d --build        # API at http://localhost:8000/api
 SEED=true docker compose up -d      # optional: seed 30 users on first start
 ```
-The entrypoint runs the migrations, generates the Passport keys and the personal access client, and creates an `APP_KEY` if none is set. App storage (keys, logs) and Postgres data live in named volumes; `docker compose down -v` removes them. Override the port or database password with `APP_PORT` and `DB_PASSWORD`.
+Two services run the API: `web` (nginx) proxies PHP requests to `app` (PHP-FPM), with PostgreSQL in `db`. The entrypoint of `app` runs the migrations, generates the Passport keys and the personal access client, and creates an `APP_KEY` if none is set. App storage (keys, logs) and Postgres data live in named volumes; `docker compose down -v` removes them. Override the port or database password with `APP_PORT` and `DB_PASSWORD`.
 
 ## Endpoints (prefix `/api`)
 | Method | Path | Auth | Description |

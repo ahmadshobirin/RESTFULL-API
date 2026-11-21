@@ -1,8 +1,17 @@
 services:
-  app:
-    build: .
+  web:
+    build:
+      context: .
+      target: web
     ports:
       - "${APP_PORT:-8000}:80"
+    depends_on:
+      - app
+
+  app:
+    build:
+      context: .
+      target: app
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
